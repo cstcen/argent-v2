@@ -37,8 +37,8 @@ if [ ! -d "$ARGENT_VENV" ]; then
 fi
 source "$ARGENT_VENV/bin/activate"
 log_info "安装 Argent TUI..."
-pip install --upgrade pip -q
-pip install -q git+https://github.com/cstcen/argent-v2.git 2>&1 | tail -1 || log_error "Argent 安装失败"
+pip install $PIP_MIRROR --upgrade pip -q
+pip install $PIP_MIRROR -q git+https://github.com/cstcen/argent-v2.git 2>&1 | tail -1 || log_error "Argent 安装失败"
 log_ok "Argent TUI 已安装"
 
 # 创建 argent 命令
@@ -61,7 +61,7 @@ if command -v hermes &>/dev/null; then
     log_ok "Hermes 已安装: $(which hermes)"
 else
     log_info "安装 Hermes Agent（约需 30 秒）..."
-    pip install -q hermes-agent 2>&1 | tail -1 || log_error "Hermes 安装失败，请手动安装：pip install hermes-agent"
+    pip install $PIP_MIRROR -q hermes-agent 2>&1 | tail -1 || log_error "Hermes 安装失败，请手动安装：pip install $PIP_MIRROR hermes-agent"
     log_ok "Hermes Agent 已安装"
 fi
 
