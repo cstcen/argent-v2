@@ -57,7 +57,7 @@ class ArgentApp(App):
                         env[k.strip()] = v.strip()
             dbg(f"CHAT: calling hermes -z {text!r}")
             proc = await asyncio.create_subprocess_exec(
-                "script", "-q", "-c", f"{self.hermes_bin} -z {text}", "/dev/null",
+                self.hermes_bin, "--cli", "-z", text,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env,
             )
             try:
