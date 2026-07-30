@@ -57,10 +57,15 @@ class ArgentApp(App):
                         env[k.strip()] = v.strip()
             dbg(f"CHAT: calling hermes chat -q {text!r}")
             proc = await asyncio.create_subprocess_exec(
-                self.hermes_bin, "chat", "-q", text,
+                self.hermes_bin, "--cli", "chat", "-q", text,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env,
             )
-            stdout, stderr = await proc.communicate()
+            try:
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+            except asyncio.TimeoutError:
+                proc.kill()
+                stdout, stderr = await proc.communicate()
+                dbg("CHAT: TIMEOUT")
             out = stdout.decode("utf-8", errors="replace")
             err = stderr.decode("utf-8", errors="replace")
             dbg(f"CHAT: stdout={len(out)} stderr={len(err)} rc={proc.returncode}")
