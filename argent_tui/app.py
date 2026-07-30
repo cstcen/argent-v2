@@ -1,80 +1,70 @@
-"""Argent TUI — 调试版 v4（script 伪终端）。"""
-import os, shutil, asyncio
+"""Argent TUI — 线程版（subprocess.run 在后台线程）。"""
+import os, shutil, asyncio, subprocess, re, threading
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.widgets import Input, Static
 
 ARGENT_HOME = Path(os.environ.get("ARGENT_HOME", Path.home() / ".argent"))
-LOG_FILE = ARGENT_HOME / "argent_debug.log"
 
-def dbg(msg: str):
-    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(LOG_FILE, "a") as f:
-        f.write(msg + "\n")
+def clean_response(raw: str) -> str:
+    clean = re.sub(r'\x1b\[[0-9;]*m', '', raw)
+    m = re.search(r'╮\s*\n\s*(.*?)\s*\n\s*╰', clean, re.DOTALL)
+    if m: clean = m.group(1).strip()
+    clean = re.sub(r'(Query|Initializing|Session|Duration|Messages|Resume|hermes):.*\n?', '', clean, flags=re.MULTILINE)
+    return clean.strip()
 
 class ArgentApp(App):
-    CSS = "Screen { background: #0D1B2A; } #log { padding: 1 2; color: #DDE4EC; } #inp { dock: bottom; margin: 1 2; height: 3; }"
+    CSS = "Screen { background: #0D1B2A; } #log { padding: 1 2; color: #DDE4EC; height: 1fr; } #inp { dock: bottom; margin: 1 2; height: 3; }"
 
     def compose(self) -> ComposeResult:
-        yield Static("", id="log")
-        yield Input(placeholder="输入消息...", id="inp")
+        yield Static("Argent v2 — 键入消息", id="log")
+        yield Input(placeholder="输入消息，Enter 发送...", id="inp")
 
     def on_mount(self):
-        dbg("on_mount start")
         self.hermes_bin = shutil.which("hermes")
-        dbg(f"Hermes: {self.hermes_bin}")
-        self._log(f"Hermes: {self.hermes_bin or 'NOT FOUND'}")
-        dbg("on_mount done")
+        self._append(f"Hermes: {self.hermes_bin or 'NOT FOUND'}")
+        self.query_one("#inp").focus()
 
-    def _log(self, msg: str):
-        self._log_text = getattr(self, "_log_text", "") + "\n" + str(msg)[:500]
-        self.query_one("#log").update(self._log_text)
+    def _append(self, msg: str):
+        w = self.query_one("#log")
+        text = getattr(self, "_text", "") + "\n" + msg
+        self._text = text
+        w.update(text[-2000:])
 
     def on_input_submitted(self, event: Input.Submitted):
-        dbg(f"INPUT: {event.value!r}")
         text = event.value.strip()
         if not text: return
         event.input.value = ""
-        self._log(f"你: {text}")
+        self._append(f"你: {text}")
+        if not self.hermes_bin: return
 
-        if not self.hermes_bin:
-            self._log("⚠ hermes 未安装")
-            return
+        # 在独立线程中运行，不阻塞 UI
+        threading.Thread(target=self._run_hermes, args=(text,), daemon=True).start()
 
-        async def chat():
-            dbg("CHAT: start")
-            env = os.environ.copy()
-            env["HERMES_HOME"] = str(ARGENT_HOME)
-            env_file = ARGENT_HOME / ".env"
-            if env_file.exists():
-                for line in env_file.read_text().splitlines():
-                    if line.strip() and "=" in line and not line.startswith("#"):
-                        k, _, v = line.partition("=")
-                        env[k.strip()] = v.strip()
-
-            # script 提供伪 TTY
-            cmd = f"{self.hermes_bin} chat -q {text}"
-            dbg(f"CHAT: script -qc {cmd!r}")
-            proc = await asyncio.create_subprocess_exec(
-                "script", "-q", "-c", cmd, "/dev/null",
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env,
+    def _run_hermes(self, text: str):
+        env = os.environ.copy()
+        env["HERMES_HOME"] = str(ARGENT_HOME)
+        env_file = ARGENT_HOME / ".env"
+        if env_file.exists():
+            for line in env_file.read_text().splitlines():
+                if line.strip() and "=" in line and not line.startswith("#"):
+                    k, _, v = line.partition("=")
+                    env[k.strip()] = v.strip()
+        try:
+            r = subprocess.run(
+                [self.hermes_bin, "chat", "-q", text],
+                capture_output=True, text=True, env=env, timeout=60,
             )
-            try:
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
-            except asyncio.TimeoutError:
-                proc.kill()
-                stdout, stderr = await proc.communicate()
-                dbg("CHAT: TIMEOUT")
-            out = stdout.decode("utf-8", errors="replace")
-            err = stderr.decode("utf-8", errors="replace")
-            dbg(f"CHAT: out={len(out)} err={len(err)} rc={proc.returncode}")
-            dbg(f"CHAT: out={out[:300]!r}")
-            dbg(f"CHAT: err={err[:300]!r}")
-            self._log(f"out: {out[:300]}")
-            self._log(f"err: {err[:300]}")
+            out = (r.stdout + r.stderr).strip()
+            clean = clean_response(out) or out[:300]
+        except subprocess.TimeoutExpired:
+            clean = "⚠ 超时"
+        except Exception as e:
+            clean = f"⚠ {e}"
 
-        asyncio.ensure_future(chat())
+        def update():
+            self._append(f"Argent:\n{clean}")
+        self.call_from_thread(update)
 
 def main():
-    dbg("=== argent start ===")
     ArgentApp().run()
