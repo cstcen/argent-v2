@@ -8,7 +8,7 @@ log_info()  { echo -e "${CYAN}→${NC} $*"; }
 log_ok()    { echo -e "${GREEN}✓${NC} $*"; }
 log_error() { echo -e "${RED}✗${NC} $*"; exit 1; }
 
-ARGENT_VERSION="v0.3.0"
+ARGENT_VERSION="v0.3.1"
 PIP_MIRROR="-i https://pypi.tuna.tsinghua.edu.cn/simple"
 
 echo ""
@@ -68,7 +68,7 @@ case "${1:-chat}" in
     exec python -m argent_tui.cli "$@"
     ;;
   version|--version|-v)
-    echo "Argent v0.3.0"
+    echo "Argent v0.3.1"
     ;;
   *)
     exec python -m argent_tui.cli "$@"
