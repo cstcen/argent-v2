@@ -99,44 +99,39 @@ def login_whyshu() -> bool:
         print("❌ 授权超时")
         return False
 
-    ARGENT_HOME.mkdir(parents=True, exist_ok=True)
-    (ARGENT_HOME / "auth_token").write_text(token)
+    # ═══ 安装 whyshu provider 插件到 Hermes bundled 目录 ═══
+    # bundled dir is where Hermes scans for providers
+    import providers as _providers
+    bundled = Path(_providers.__file__).parent / ".." / "plugins" / "model-providers" / "whyshu"
+    bundled = bundled.resolve()
+    bundled.mkdir(parents=True, exist_ok=True)
+    (bundled / "__init__.py").write_text(PLUGIN_INIT)
+    (bundled / "plugin.yaml").write_text(PLUGIN_YAML)
+    print(f"   ✓ whyshu 插件已安装到 Hermes")
 
-    # 写入 .env
+    # config.yaml — provider: whyshu
+    HERMES_HOME.mkdir(parents=True, exist_ok=True)
+    config = """model:
+  default: deepseek-v4-pro
+  provider: whyshu
+display:
+  show_reasoning: false
+  interface: tui
+"""
+    (HERMES_HOME / "config.yaml").write_text(config)
+    (ARGENT_HOME / "config.yaml").write_text(config)
+
+    # .env
     env_path = ARGENT_HOME / ".env"
     lines = []
     if env_path.exists():
-        lines = [l for l in env_path.read_text().splitlines() if not l.startswith("WHYSHU_API_KEY=")]
+        lines = [l for l in env_path.read_text().splitlines()
+                 if not l.startswith(("WHYSHU_API_KEY=", "OPENROUTER_API_KEY="))]
     lines.append(f"WHYSHU_API_KEY={token}")
     env_path.write_text("\n".join(lines) + "\n")
-
-    # ═══ 关键：写入 Hermes 自己目录的 config + 插件 ═══
-    HERMES_HOME.mkdir(parents=True, exist_ok=True)
     
-    # config.yaml
-    (HERMES_HOME / "config.yaml").write_text(CONFIG_YAML)
-    
-    # whyshu 插件 → Hermes 的 plugins 目录（Hermes 只扫这里）
-    plugin_dir = HERMES_HOME / "plugins" / "model-providers" / "whyshu"
-    plugin_dir.mkdir(parents=True, exist_ok=True)
-    (plugin_dir / "__init__.py").write_text(PLUGIN_INIT)
-    (plugin_dir / "plugin.yaml").write_text(PLUGIN_YAML)
-
-    # 同时写一份到 Argent 自己的目录（备用）
-    arg_plugin = ARGENT_HOME / "plugins" / "model-providers" / "whyshu"
-    arg_plugin.mkdir(parents=True, exist_ok=True)
-    (arg_plugin / "__init__.py").write_text(PLUGIN_INIT)
-    (arg_plugin / "plugin.yaml").write_text(PLUGIN_YAML)
-    (ARGENT_HOME / "config.yaml").write_text(CONFIG_YAML)
-
-    # 同步 .env 到 Hermes
+    # sync .env to Hermes HOME
     shutil.copy(ARGENT_HOME / ".env", HERMES_HOME / ".env")
-    
-    # symlink Hermes → Argent（让两者共用配置）
-    try:
-        os.symlink(str(ARGENT_HOME / "config.yaml"), str(HERMES_HOME / "config.yaml"))
-    except FileExistsError:
-        pass
 
     print("✅ 登录成功！Hermes 已配置 whyshu provider。")
     return True
