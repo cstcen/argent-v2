@@ -10,14 +10,15 @@ ARGENT_HOME = Path(os.environ.get("ARGENT_HOME", Path.home() / ".argent"))
 def clean_response(raw: str) -> str:
     """过滤 Hermes 输出，只保留 AI 回复内容。"""
     clean = re.sub(r'\x1b\[[0-9;]*m', '', raw)
-    clean = re.sub(r'^Query:.*\n?', '', clean, flags=re.MULTILINE)
-    clean = re.sub(r'^Initializing.*\n?', '', clean, flags=re.MULTILINE)
-    clean = re.sub(r'^\s*⚠.*\n?', '', clean, flags=re.MULTILINE)
-    clean = re.sub(r'^[─╭╮╰╯].*\n?', '', clean, flags=re.MULTILINE)
-    clean = re.sub(r'^(Session|Duration|Messages|Resume).*\n?', '', clean, flags=re.MULTILINE)
-    clean = re.sub(r'^\s*hermes --resume.*\n?', '', clean, flags=re.MULTILINE)
-    clean = re.sub(r'\n\s*hermes --resume.*', '', clean)
-    clean = re.sub(r'^.*⚕ Hermes.*\n?', '', clean)
+    # 提取 ╭─ ╮ 和 ╰─ ╯ 之间的内容
+    m = re.search(r'╮\s*\n\s*(.*?)\s*\n\s*╰', clean, re.DOTALL)
+    if m:
+        clean = m.group(1).strip()
+    else:
+        # 备用：去掉明显的装饰行
+        clean = re.sub(r'^.*⚕ Hermes.*\n?', '', clean, flags=re.MULTILINE)
+        clean = re.sub(r'^[─╭╮╰╯].*\n?', '', clean, flags=re.MULTILINE)
+        clean = re.sub(r'^(Query|Initializing|Session|Duration|Messages|Resume|hermes).*\n?', '', clean, flags=re.MULTILINE)
     clean = re.sub(r'\n{3,}', '\n\n', clean)
     return clean.strip()
 
