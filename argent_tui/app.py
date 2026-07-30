@@ -1,4 +1,4 @@
-"""Argent TUI — 调试版（写文件日志）。"""
+"""Argent TUI — 调试版 v4（script 伪终端）。"""
 import os, shutil, asyncio
 from pathlib import Path
 from textual.app import App, ComposeResult
@@ -33,20 +33,16 @@ class ArgentApp(App):
     def on_input_submitted(self, event: Input.Submitted):
         dbg(f"INPUT: {event.value!r}")
         text = event.value.strip()
-        if not text:
-            dbg("INPUT: empty")
-            return
+        if not text: return
         event.input.value = ""
         self._log(f"你: {text}")
-        dbg("INPUT: logged")
 
         if not self.hermes_bin:
             self._log("⚠ hermes 未安装")
-            dbg("INPUT: no hermes_bin")
             return
 
         async def chat():
-            dbg("CHAT: starting subprocess")
+            dbg("CHAT: start")
             env = os.environ.copy()
             env["HERMES_HOME"] = str(ARGENT_HOME)
             env_file = ARGENT_HOME / ".env"
@@ -55,9 +51,12 @@ class ArgentApp(App):
                     if line.strip() and "=" in line and not line.startswith("#"):
                         k, _, v = line.partition("=")
                         env[k.strip()] = v.strip()
-            dbg(f"CHAT: calling hermes -z {text!r}")
+
+            # script 提供伪 TTY
+            cmd = f"{self.hermes_bin} chat -q {text}"
+            dbg(f"CHAT: script -qc {cmd!r}")
             proc = await asyncio.create_subprocess_exec(
-                self.hermes_bin, "-z", text,
+                "script", "-q", "-c", cmd, "/dev/null",
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env,
             )
             try:
@@ -68,13 +67,13 @@ class ArgentApp(App):
                 dbg("CHAT: TIMEOUT")
             out = stdout.decode("utf-8", errors="replace")
             err = stderr.decode("utf-8", errors="replace")
-            dbg(f"CHAT: stdout={len(out)} stderr={len(err)} rc={proc.returncode}")
-            dbg(f"CHAT: stderr content: {err[:500]}")
-            self._log(f"stdout: {out[:300]}")
-            self._log(f"stderr: {err[:300]}")
+            dbg(f"CHAT: out={len(out)} err={len(err)} rc={proc.returncode}")
+            dbg(f"CHAT: out={out[:300]!r}")
+            dbg(f"CHAT: err={err[:300]!r}")
+            self._log(f"out: {out[:300]}")
+            self._log(f"err: {err[:300]}")
 
         asyncio.ensure_future(chat())
-        dbg("INPUT: future created")
 
 def main():
     dbg("=== argent start ===")
