@@ -4,8 +4,9 @@
 """
 
 import os
-import subprocess
 import shutil
+import re
+import asyncio
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.widgets import Header, RichLog, Input
@@ -49,50 +50,66 @@ class ArgentApp(App):
         else:
             self.log(f"[#00C896]✓[/] Hermes 就绪")
 
-    def on_input_submitted(self, event: Input.Submitted):
-        text = event.value.strip()
-        if not text:
-            return
-
-        event.input.value = ""
-        self.log(f"\n[bold #00C896]你:[/] {text}")
-
-        if not self.hermes_bin:
-            self.log("[red]⚠ hermes 未安装[/]")
-            return
-
+    async def _run_hermes(self, text: str) -> str:
+        """在后台线程中运行 hermes，不阻塞 UI。"""
         env = os.environ.copy()
         env["HERMES_HOME"] = str(ARGENT_HOME)
 
+        proc = await asyncio.create_subprocess_exec(
+            self.hermes_bin, "chat", "-q", text,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=env,
+        )
         try:
-            result = subprocess.run(
-                [self.hermes_bin, "chat", "-q", text],
-                capture_output=True, text=True,
-                env=env, timeout=60,
-            )
-            out = result.stdout.strip()
-            err = result.stderr.strip()
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=60)
+        except asyncio.TimeoutError:
+            proc.kill()
+            return "[red]⚠ 超时（60秒）[/]"
 
-            if out:
-                # 过滤 ANSI 转义序列，保留纯文本
-                import re
-                clean = re.sub(r'\x1b\[[0-9;]*m', '', out)
-                clean = re.sub(r'╭─.*?╮\n?', '', clean, flags=re.DOTALL)
-                clean = re.sub(r'╰─.*?╯\n?', '', clean, flags=re.DOTALL)
-                clean = clean.strip()
-                if clean:
-                    self.log(f"\n[bold #7C3AED]Argent:[/]\n{clean}\n")
-                else:
-                    self.log(f"\n[bold #7C3AED]Argent:[/]\n{out[:500]}\n")
-            elif err:
-                self.log(f"[red]⚠ {err[:300]}[/]")
-            else:
-                self.log(f"[red]⚠ 无响应（返回码: {result.returncode}）[/]")
+        out = stdout.decode("utf-8", errors="replace").strip()
+        err = stderr.decode("utf-8", errors="replace").strip()
 
-        except subprocess.TimeoutExpired:
-            self.log("[red]⚠ 超时（60秒）[/]")
-        except Exception as e:
-            self.log(f"[red]⚠ 出错: {e}[/]")
+        if out:
+            clean = re.sub(r'\x1b\[[0-9;]*m', '', out)
+            clean = re.sub(r'╭─.*?╮\n?', '', clean, flags=re.DOTALL)
+            clean = re.sub(r'╰─.*?╯\n?', '', clean, flags=re.DOTALL)
+            clean = re.sub(r'Session:.*', '', clean)
+            clean = re.sub(r'Duration:.*', '', clean)
+            clean = re.sub(r'Messages:.*', '', clean)
+            clean = re.sub(r'Resume this session.*', '', clean)
+            clean = re.sub(r'\n{3,}', '\n\n', clean)
+            return clean.strip() or out[:500]
+        elif err:
+            return f"[red]⚠ {err[:300]}[/]"
+        return f"[red]⚠ 无响应（返回码: {proc.returncode}）[/]"
+
+    async def on_input_submitted(self, event: Input.Submitted):
+        text = event.value.strip()
+        if not text:
+            return
+        event.input.value = ""
+        event.input.disabled = True
+
+        self.log(f"\n[bold #00C896]你:[/] {text}")
+
+        if not getattr(self, "hermes_bin", None):
+            self.log("[red]⚠ hermes 未安装[/]")
+            event.input.disabled = False
+            return
+
+        # 非阻塞 — 用 call_later 调度
+        self.set_timer(0.05, lambda: self._chat_turn(text))
+
+    def _chat_turn(self, text: str):
+        """通过 asyncio 在后台运行对话。"""
+        async def run():
+            response = await self._run_hermes(text)
+            self.log(f"\n[bold #7C3AED]Argent:[/]\n{response}\n")
+            inp = self.query_one("#user-input")
+            inp.disabled = False
+            inp.focus()
+        asyncio.create_task(run())
 
     def action_clear(self):
         self.query_one("#chat-log").clear()
