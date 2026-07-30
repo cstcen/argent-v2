@@ -8,7 +8,7 @@ log_info()  { echo -e "${CYAN}→${NC} $*"; }
 log_ok()    { echo -e "${GREEN}✓${NC} $*"; }
 log_error() { echo -e "${RED}✗${NC} $*"; exit 1; }
 
-ARGENT_VERSION="v2.0.0"
+ARGENT_VERSION="v0.3.0"
 PIP_MIRROR="-i https://pypi.tuna.tsinghua.edu.cn/simple"
 
 echo ""

@@ -7,7 +7,8 @@ import sys
 from pathlib import Path
 
 ARGENT_HOME = Path(os.environ.get("ARGENT_HOME", Path.home() / ".argent"))
-VERSION = "2.0.0"
+HERMES_HOME = ARGENT_HOME
+VERSION = "0.3.0"
 
 
 def main():
@@ -17,26 +18,18 @@ def main():
         return cmd_setup()
     elif cmd == "install":
         return cmd_install()
-    elif cmd == "update":
-        return cmd_update()
     elif cmd == "version" or cmd == "--version" or cmd == "-v":
         print(f"Argent v{VERSION}")
     elif cmd == "chat" or cmd == "" or cmd == "--help" or cmd == "-h":
         return cmd_chat()
     else:
-        print(f"Unknown command: {cmd}")
-        print("  argent              Start chat")
-        print("  argent setup        配置 Argent")
-        print("  argent install      安装 Hermes + 配置")
-        print("  argent update       检查更新")
-        print("  argent version      查看版本")
+        # 其余参数透传给 hermes
+        return _exec_hermes(sys.argv[1:])
 
 
 def cmd_chat():
-    """启动 Argent TUI 聊天界面。"""
-    from argent_tui.app import ArgentApp
-    app = ArgentApp()
-    app.run()
+    """启动 Hermes TUI（HERMES_HOME 指向 Argent 配置目录）。"""
+    _exec_hermes(["--tui"])
 
 
 def cmd_setup():
@@ -50,20 +43,17 @@ def cmd_setup():
     print("╚══════════════════════════════════════════╝")
     print()
 
-    # ── ① 登录 ──
     print("━━━ ① 登录问述科技账号 ━━━")
     from argent_tui.setup import login_whyshu
     if not login_whyshu():
         print("登录失败，请重试 argent setup")
         return
     
-    # ── ② 角色 ──
     print()
     print("━━━ ② 选择行业与角色（可选） ━━━")
     from argent_tui.setup import select_role
     select_role()
 
-    # ── ③ 飞书 ──
     print()
     print("━━━ ③ 配置飞书对接（可选） ━━━")
     from argent_tui.setup import setup_feishu
@@ -75,64 +65,31 @@ def cmd_setup():
 
 def cmd_install():
     """安装 Hermes + 配置 whyshu provider。"""
-    
-    # 1. 检查 Hermes 是否已安装
     hermes_bin = shutil.which("hermes")
     if hermes_bin:
         print(f"✅ Hermes 已安装: {hermes_bin}")
     else:
-        print("🔧 正在安装 Hermes Agent（约需 30 秒）...")
+        print("🔧 正在安装 Hermes Agent...")
         try:
             subprocess.run(
                 [sys.executable, "-m", "pip", "install", "hermes-agent"],
-                check=True,
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                timeout=120
+                check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120,
             )
             print("✅ Hermes Agent 已安装")
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-            print("⚠️  安装失败。请手动执行：")
-            print("   pip install hermes-agent")
+            print("⚠️  安装失败。请手动：pip install hermes-agent")
             return
 
-    # 2. 创建配置目录
     ARGENT_HOME.mkdir(parents=True, exist_ok=True)
-
-    # 3. 写入 whyshu provider 插件
-    plugin_dir = ARGENT_HOME / "plugins" / "model-providers" / "whyshu"
-    plugin_dir.mkdir(parents=True, exist_ok=True)
-    _write_whyshu_plugin(plugin_dir)
-
-    # 4. 写入默认 config
-    config_path = ARGENT_HOME / "config.yaml"
-    if not config_path.exists():
-        config_path.write_text("""model:
-  default: deepseek-v4-pro
-  provider: whyshu
-display:
-  show_reasoning: false
-  interface: tui
-custom_providers:
-  - name: whyshu
-    base_url: https://whyshu.com/api/argent/v1
-    api_key_env: WHYSHU_API_KEY
-""")
-        print("✅ 默认配置已创建")
-    else:
-        print("   config.yaml 已存在，跳过。")
-
-    print()
     print("✅ 安装完成！运行 argent setup 配置账号。")
 
 
-def cmd_update():
-    """检查更新。"""
-    print(f"✅ Argent v{VERSION} 已是最新版本。")
-
-
-def _write_whyshu_plugin(dir: Path):
-    """写入 whyshu provider 插件文件。"""
-    (dir / "__init__.py").write_text("""\"\"\"WHYSHU provider profile.\"\"\"
+def _write_whyshu_plugin():
+    """写入 whyshu provider 插件到 Hermes bundled 目录。"""
+    import providers
+    bundled = Path(providers.__file__).parent.parent / "plugins" / "model-providers" / "whyshu"
+    bundled.mkdir(parents=True, exist_ok=True)
+    (bundled / "__init__.py").write_text("""\"\"\"WHYSHU provider profile.\"\"\"
 from typing import Any
 from providers import register_provider
 from providers.base import ProviderProfile
@@ -149,12 +106,23 @@ whyshu = WhyshuProfile(
 )
 register_provider(whyshu)
 """)
-    (dir / "plugin.yaml").write_text("""name: whyshu
-kind: model-provider
-version: 1.0.0
-description: 问述科技 (WHYSHU) — 积分制 AI 模型服务
-author: WHYSHU
-""")
+    (bundled / "plugin.yaml").write_text("name: whyshu\nkind: model-provider\nversion: 1.0.0\ndescription: 问述科技\n")
+
+
+def _exec_hermes(args: list):
+    """执行 hermes，设置 HERMES_HOME 指向 Argent 配置目录。"""
+    env = os.environ.copy()
+    env["HERMES_HOME"] = str(HERMES_HOME)
+    # 注入 .env 中的环境变量
+    env_file = ARGENT_HOME / ".env"
+    if env_file.exists():
+        for line in env_file.read_text().splitlines():
+            if line.strip() and "=" in line and not line.startswith("#"):
+                k, _, v = line.partition("=")
+                env[k.strip()] = v.strip()
+
+    hermes = shutil.which("hermes") or "hermes"
+    os.execve(hermes, [hermes] + list(args), env)
 
 
 if __name__ == "__main__":
