@@ -29,6 +29,11 @@ fi
 log_ok "Python $(python3 --version | cut -d' ' -f2)"
 
 # ── 2. 安装 Argent TUI ──
+# 确保 pip 可用
+if ! python3 -m pip --version &>/dev/null; then
+  log_info "安装 pip..."
+  python3 -m ensurepip --upgrade 2>/dev/null || log_error "无法安装 pip"
+fi
 log_info "安装 Argent TUI..."
 python3 -m pip install --user -q git+https://github.com/cstcen/argent-v2.git 2>&1 | tail -1 || log_error "Argent 安装失败"
 log_ok "Argent TUI 已安装"
