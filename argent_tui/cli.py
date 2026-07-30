@@ -148,22 +148,23 @@ def cmd_balance():
     if env_file.exists():
         for line in env_file.read_text().splitlines():
             if line.startswith("WHYSHU_API_KEY="):
-                token = line.split("=", 1)[1]
+                token = line.split("=", 1)[1].strip()
                 break
     if not token:
         print("❌ 未登录，请先运行 argent setup")
         return
 
     try:
-        import urllib.request, json
-        req = urllib.request.Request(
-            "https://whyshu.com/api/argent/balance",
-            headers={"Authorization": f"Bearer {token}"},
-        )
+        import urllib.request, urllib.error, json
+        url = "https://whyshu.com/api/argent/balance"
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
         points = data.get("points", 0)
         print(f"💰 当前积分: {points}")
+    except urllib.error.HTTPError as e:
+        body = e.read().decode() if e.fp else ""
+        print(f"❌ [{e.code}] {body[:200]}")
     except Exception as e:
         print(f"❌ 查询失败: {e}")
 
