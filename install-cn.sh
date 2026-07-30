@@ -55,7 +55,7 @@ fi
 # ── 3. Hermes ──
 log_info "安装 Hermes Agent..."
 rm -f "$HOME/.local/bin/hermes" 2>/dev/null || true
-curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash 2>&1 | tail -5
+pip install $PIP_MIRROR -q hermes-agent 2>&1 | tail -3
 command -v hermes &>/dev/null || log_error "Hermes 安装失败，请检查网络"
 log_ok "Hermes Agent 已安装"
 
