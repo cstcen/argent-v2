@@ -34,7 +34,7 @@ author: WHYSHU
 
 CONFIG_YAML = """model:
   default: deepseek-v4-pro
-  provider: whyshu
+  provider: custom
 display:
   show_reasoning: false
   interface: tui
