@@ -72,9 +72,9 @@ class ArgentApp(App):
             env = os.environ.copy()
             env["HERMES_HOME"] = str(ARGENT_HOME)
             
-            # 异步调用 hermes -c "消息"
+            # 异步调用 hermes chat -q "消息"
             proc = await asyncio.create_subprocess_exec(
-                self.hermes_bin, "-c", text,
+                self.hermes_bin, "chat", "-q", text,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 env=env,
