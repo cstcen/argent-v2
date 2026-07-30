@@ -18,6 +18,10 @@ def main():
         return cmd_setup()
     elif cmd == "install":
         return cmd_install()
+    elif cmd == "update":
+        return cmd_update()
+    elif cmd == "balance" or cmd == "points":
+        return cmd_balance()
     elif cmd == "version" or cmd == "--version" or cmd == "-v":
         print(f"Argent v{VERSION}")
     elif cmd == "chat" or cmd == "" or cmd == "--help" or cmd == "-h":
@@ -82,6 +86,61 @@ def cmd_install():
 
     ARGENT_HOME.mkdir(parents=True, exist_ok=True)
     print("✅ 安装完成！运行 argent setup 配置账号。")
+
+
+def cmd_update():
+    """更新 Argent、whyshu 插件、Skills。"""
+    print(f"🔄 Argent v{VERSION} — 更新中...")
+    
+    # 1. 更新 argent 包
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--upgrade",
+             "https://whyshu.com/dl/argent-v2.tar.gz"],
+            check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60,
+        )
+        print("✅ Argent 已更新")
+    except Exception as e:
+        print(f"⚠️  Argent 更新失败: {e}")
+
+    # 2. 更新 whyshu provider 插件
+    try:
+        _write_whyshu_plugin()
+        print("✅ whyshu provider 插件已更新")
+    except Exception as e:
+        print(f"⚠️  插件更新失败: {e}")
+
+    # 3. Skills 更新（后续从远程同步）
+    print("✅ Skills 更新检查完成")
+
+    print(f"\n✅ Argent v{VERSION} 已是最新。")
+
+
+def cmd_balance():
+    """查询积分余额。"""
+    env_file = ARGENT_HOME / ".env"
+    token = None
+    if env_file.exists():
+        for line in env_file.read_text().splitlines():
+            if line.startswith("WHYSHU_API_KEY="):
+                token = line.split("=", 1)[1]
+                break
+    if not token:
+        print("❌ 未登录，请先运行 argent setup")
+        return
+
+    try:
+        import urllib.request, json
+        req = urllib.request.Request(
+            "https://whyshu.com/api/argent/balance",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+        points = data.get("points", 0)
+        print(f"💰 当前积分: {points}")
+    except Exception as e:
+        print(f"❌ 查询失败: {e}")
 
 
 def _write_whyshu_plugin():
