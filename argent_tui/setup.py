@@ -116,7 +116,7 @@ def login_whyshu() -> bool:
   provider: whyshu
 display:
   show_reasoning: false
-  interface: tui
+  interface: cli
 """
     (HERMES_HOME / "config.yaml").write_text(config)
     (ARGENT_HOME / "config.yaml").write_text(config)
