@@ -62,6 +62,11 @@ case "${1:-chat}" in
     pip install --force-reinstall --no-deps -q https://whyshu.com/dl/argent.tar.gz
     echo "✅ Argent 已更新"
     ;;
+  whoami|balance|points)
+    # 需要新版本 Python 代码，先更新再执行
+    pip install --force-reinstall --no-deps -q https://whyshu.com/dl/argent.tar.gz 2>/dev/null
+    exec python -m argent_tui.cli "$@"
+    ;;
   version|--version|-v)
     echo "Argent v0.3.0"
     ;;
