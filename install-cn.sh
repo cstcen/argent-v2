@@ -52,6 +52,7 @@ log_ok "Argent TUI 已安装"
 # 创建 argent 命令（覆盖旧版）
 mkdir -p "$ARGENT_HOME/bin"
 rm -f "$HOME/.local/bin/argent" "$HOME/.local/bin/argent.exe" 2>/dev/null || true
+rm -f "$ARGENT_HOME/venv/bin/argent" 2>/dev/null || true  # pip 装的旧入口
 cat > "$ARGENT_HOME/bin/argent" << 'ARGENTEOF'
 #!/usr/bin/env bash
 source "$HOME/.argent/venv/bin/activate"
