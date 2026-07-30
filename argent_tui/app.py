@@ -1,12 +1,11 @@
 """Argent TUI — 基于 Textual 的问述科技聊天界面。
 
-每轮对话通过 `hermes -c \"消息\"` 独立调用 Hermes。
+每轮对话通过 `hermes chat -q \"消息\"` 独立调用 Hermes。
 """
 
 import os
 import subprocess
 import shutil
-import asyncio
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.widgets import Header, RichLog, Input
@@ -44,16 +43,13 @@ class ArgentApp(App):
         self.query_one("#user-input").focus()
 
     def _check_hermes(self):
-        """检查 hermes 是否可用。"""
         self.hermes_bin = shutil.which("hermes")
         if not self.hermes_bin:
-            self.log("[red]⚠ hermes 未安装。请运行 argent install[/]")
-            self.log("   pip install hermes-agent\n")
+            self.log("[red]⚠ hermes 未安装[/]")
         else:
             self.log(f"[#00C896]✓[/] Hermes 就绪")
 
-    async def on_input_submitted(self, event: Input.Submitted):
-        """用户输入消息 — 调用 hermes -c。"""
+    def on_input_submitted(self, event: Input.Submitted):
         text = event.value.strip()
         if not text:
             return
@@ -65,47 +61,40 @@ class ArgentApp(App):
             self.log("[red]⚠ hermes 未安装[/]")
             return
 
-        # 显示等待状态
-        self.log("[#5E5878]...[/]")
-        
+        env = os.environ.copy()
+        env["HERMES_HOME"] = str(ARGENT_HOME)
+
         try:
-            env = os.environ.copy()
-            env["HERMES_HOME"] = str(ARGENT_HOME)
-            
-            # 异步调用 hermes chat -q "消息"
-            proc = await asyncio.create_subprocess_exec(
-                self.hermes_bin, "chat", "-q", text,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                env=env,
+            result = subprocess.run(
+                [self.hermes_bin, "chat", "-q", text],
+                capture_output=True, text=True,
+                env=env, timeout=60,
             )
-            stdout, stderr = await asyncio.wait_for(
-                proc.communicate(), timeout=60
-            )
-            
-            # 移除最后一条日志（"...")
-            # RichLog 没有直接删除最后一条的 API，用 replace
-            log_widget = self.query_one("#chat-log")
-            
-            response = stdout.decode("utf-8", errors="replace").strip()
-            err = stderr.decode("utf-8", errors="replace").strip()
-            
-            if response:
-                self.log(f"\n[bold #7C3AED]Argent:[/] {response}\n")
+            out = result.stdout.strip()
+            err = result.stderr.strip()
+
+            if out:
+                # 过滤 ANSI 转义序列，保留纯文本
+                import re
+                clean = re.sub(r'\x1b\[[0-9;]*m', '', out)
+                clean = re.sub(r'╭─.*?╮\n?', '', clean, flags=re.DOTALL)
+                clean = re.sub(r'╰─.*?╯\n?', '', clean, flags=re.DOTALL)
+                clean = clean.strip()
+                if clean:
+                    self.log(f"\n[bold #7C3AED]Argent:[/]\n{clean}\n")
+                else:
+                    self.log(f"\n[bold #7C3AED]Argent:[/]\n{out[:500]}\n")
             elif err:
-                self.log(f"\n[red]⚠ hermes 返回错误:[/]\n[#5E5878]{err[:500]}[/]")
+                self.log(f"[red]⚠ {err[:300]}[/]")
             else:
-                self.log(f"[red]⚠ hermes 无输出（返回码: {proc.returncode}）[/]")
-                self.log(f"[#5E5878]提示: 运行 argent setup 配置账号，或手动测试:[/]")
-                self.log(f"[#5E5878]  hermes chat -q \"hello\"[/]")
-                    
-        except asyncio.TimeoutError:
+                self.log(f"[red]⚠ 无响应（返回码: {result.returncode}）[/]")
+
+        except subprocess.TimeoutExpired:
             self.log("[red]⚠ 超时（60秒）[/]")
         except Exception as e:
             self.log(f"[red]⚠ 出错: {e}[/]")
 
     def action_clear(self):
-        """清屏。"""
         self.query_one("#chat-log").clear()
 
 
