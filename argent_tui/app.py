@@ -40,7 +40,8 @@ class ArgentApp(App):
 
     def _append(self, msg: str):
         chat = self.query_one("#chat-log")
-        chat.update(chat.renderable + "\n" + msg)
+        self._chat_text = getattr(self, '_chat_text', '') + "\n" + msg
+        chat.update(self._chat_text)
 
     def on_input_submitted(self, event: Input.Submitted):
         text = event.value.strip()
