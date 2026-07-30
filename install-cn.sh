@@ -18,12 +18,23 @@ echo "║    问述科技 · 桌面 AI 助手                ║"
 echo "╚══════════════════════════════════════════╝"
 echo ""
 
-# ── 1. Python ──
+# ── 1. Node.js（Hermes TUI 依赖）───
+log_info "检查 Node.js..."
+if ! command -v node &>/dev/null; then
+    log_info "正在安装 Node.js..."
+    sudo apt install -y nodejs 2>/dev/null || {
+        curl -fsSL https://deb.nodesource.com/setup_20.x 2>/dev/null | sudo bash 2>/dev/null
+        sudo apt install -y nodejs 2>/dev/null
+    } || log_info "请手动安装 Node.js: sudo apt install nodejs"
+fi
+command -v node &>/dev/null && log_ok "Node.js $(node --version)" || true
+
+# ── 2. Python ──
 log_info "检查 Python..."
 command -v python3 &>/dev/null || log_error "请先安装 Python 3.10+"
 log_ok "Python $(python3 --version | cut -d' ' -f2)"
 
-# ── 2. venv + Argent ──
+# ── 3. venv + Argent ──
 mkdir -p "$ARGENT_HOME"
 ARGENT_VENV="$ARGENT_HOME/venv"
 if [ ! -d "$ARGENT_VENV" ]; then
@@ -52,14 +63,14 @@ if [[ ":$PATH:" != *":$ARGENT_HOME/bin:"* ]]; then
   echo "export PATH=\"$ARGENT_HOME/bin:\$PATH\"" >> "$HOME/.bashrc"
 fi
 
-# ── 3. Hermes ──
+# ── 4. Hermes ──
 log_info "安装 Hermes Agent..."
 rm -f "$HOME/.local/bin/hermes" 2>/dev/null || true
 pip install $PIP_MIRROR -q hermes-agent 2>&1 | tail -3
 command -v hermes &>/dev/null || log_error "Hermes 安装失败，请检查网络"
 log_ok "Hermes Agent 已安装"
 
-# ── 4. 配置 ──
+# ── 5. 配置 ──
 if [ ! -f "$ARGENT_HOME/config.yaml" ]; then
     cat > "$ARGENT_HOME/config.yaml" << 'YAML'
 model:
