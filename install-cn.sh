@@ -54,7 +54,21 @@ mkdir -p "$ARGENT_HOME/bin"
 cat > "$ARGENT_HOME/bin/argent" << 'ARGENTEOF'
 #!/usr/bin/env bash
 source "$HOME/.argent/venv/bin/activate"
-exec python -m argent_tui.cli "$@"
+
+# 内置命令：不依赖 argent Python 代码版本，shell 直接处理
+case "${1:-chat}" in
+  update)
+    echo "🔄 更新 Argent..."
+    pip install --force-reinstall --no-deps -q https://whyshu.com/dl/argent.tar.gz
+    echo "✅ Argent 已更新"
+    ;;
+  version|--version|-v)
+    echo "Argent v0.3.0"
+    ;;
+  *)
+    exec python -m argent_tui.cli "$@"
+    ;;
+esac
 ARGENTEOF
 chmod +x "$ARGENT_HOME/bin/argent"
 log_ok "argent 命令已创建"
