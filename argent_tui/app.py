@@ -18,8 +18,8 @@ class ArgentApp(App):
         self._log(f"Hermes: {self.hermes_bin or 'NOT FOUND'}")
 
     def _log(self, msg: str):
-        w = self.query_one("#log")
-        w.update((w.renderable or "") + "\n" + str(msg)[:500])
+        self._log_text = getattr(self, "_log_text", "") + "\n" + str(msg)[:500]
+        self.query_one("#log").update(self._log_text)
 
     async def on_input_submitted(self, event: Input.Submitted):
         text = event.value.strip()
