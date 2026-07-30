@@ -58,13 +58,14 @@ class ArgentApp(App):
         async def chat():
             env = os.environ.copy()
             env["HERMES_HOME"] = str(ARGENT_HOME)
-            # 加载 .env 中的 WHYSHU_API_KEY
+            # 加载 .env 中所有配置到子进程环境
             env_file = ARGENT_HOME / ".env"
             if env_file.exists():
                 for line in env_file.read_text().splitlines():
-                    if line.startswith("WHYSHU_API_KEY="):
-                        env["WHYSHU_API_KEY"] = line.split("=", 1)[1]
-                        break
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, _, v = line.partition("=")
+                        env[k] = v
             proc = await asyncio.create_subprocess_exec(
                 self.hermes_bin, "chat", "-q", text,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env,
