@@ -63,10 +63,17 @@ if [[ ":$PATH:" != *":$ARGENT_HOME/bin:"* ]]; then
   echo "export PATH=\"$ARGENT_HOME/bin:\$PATH\"" >> "$HOME/.bashrc"
 fi
 
-# ── 4. Hermes ──
+# ── 4. Hermes（官方脚本，失败则 pip 镜像）───
 log_info "安装 Hermes Agent..."
 rm -f "$HOME/.local/bin/hermes" 2>/dev/null || true
-pip install $PIP_MIRROR -q hermes-agent 2>&1 | tail -3
+if curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash 2>&1 | tail -3; then
+    :
+elif command -v hermes &>/dev/null; then
+    :
+else
+    log_info "GitHub 不可达，使用镜像安装..."
+    pip install $PIP_MIRROR -q hermes-agent 2>&1 | tail -3
+fi
 command -v hermes &>/dev/null || log_error "Hermes 安装失败，请检查网络"
 log_ok "Hermes Agent 已安装"
 
