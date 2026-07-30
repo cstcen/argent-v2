@@ -55,9 +55,9 @@ class ArgentApp(App):
                     if line.strip() and "=" in line and not line.startswith("#"):
                         k, _, v = line.partition("=")
                         env[k.strip()] = v.strip()
-            dbg(f"CHAT: calling hermes chat -q {text!r}")
+            dbg(f"CHAT: calling hermes -z {text!r}")
             proc = await asyncio.create_subprocess_exec(
-                self.hermes_bin, "-z", text,
+                "script", "-q", "-c", f"{self.hermes_bin} -z {text}", "/dev/null",
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env,
             )
             try:
