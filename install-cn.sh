@@ -28,30 +28,44 @@ if [ "$PY" != "ok" ]; then
 fi
 log_ok "Python $(python3 --version | cut -d' ' -f2)"
 
-# ── 2. 安装 Argent TUI ──
-# 确保 pip 可用
-if ! python3 -m pip --version &>/dev/null; then
-  log_info "安装 pip..."
-  python3 -m ensurepip --upgrade 2>/dev/null || log_error "无法安装 pip"
+# ── 2. 虚拟环境 & 安装 Argent ──
+mkdir -p "$ARGENT_HOME"
+ARGENT_VENV="$ARGENT_HOME/venv"
+if [ ! -d "$ARGENT_VENV" ]; then
+  log_info "创建 Python 虚拟环境..."
+  python3 -m venv "$ARGENT_VENV"
 fi
+source "$ARGENT_VENV/bin/activate"
 log_info "安装 Argent TUI..."
-python3 -m pip install --user -q git+https://github.com/cstcen/argent-v2.git 2>&1 | tail -1 || log_error "Argent 安装失败"
+pip install --upgrade pip -q
+pip install -q git+https://github.com/cstcen/argent-v2.git 2>&1 | tail -1 || log_error "Argent 安装失败"
 log_ok "Argent TUI 已安装"
 
-# ── 3. 检查/安装 Hermes ──
+# 创建 argent 命令
+mkdir -p "$ARGENT_HOME/bin"
+cat > "$ARGENT_HOME/bin/argent" << 'ARGENTEOF'
+#!/usr/bin/env bash
+source "$HOME/.argent/venv/bin/activate"
+exec python -m argent_tui.cli "$@"
+ARGENTEOF
+chmod +x "$ARGENT_HOME/bin/argent"
+log_ok "argent 命令已创建"
+
+# PATH
+if [[ ":$PATH:" != *":$ARGENT_HOME/bin:"* ]]; then
+  echo "export PATH=\"$ARGENT_HOME/bin:\$PATH\"" >> "$HOME/.bashrc"
+fi
+
+# ── 3. 安装 Hermes ──
 if command -v hermes &>/dev/null; then
     log_ok "Hermes 已安装: $(which hermes)"
 else
     log_info "安装 Hermes Agent（约需 30 秒）..."
-    python3 -m pip install --user -q hermes-agent 2>&1 | tail -1 || {
-        log_info "pip 安装失败，尝试 pipx..."
-        pipx install hermes-agent 2>/dev/null || log_error "Hermes 安装失败，请手动安装：python3 -m pip install hermes-agent"
-    }
+    pip install -q hermes-agent 2>&1 | tail -1 || log_error "Hermes 安装失败，请手动安装：pip install hermes-agent"
     log_ok "Hermes Agent 已安装"
 fi
 
 # ── 4. 配置 ──
-mkdir -p "$ARGENT_HOME"
 if [ ! -f "$ARGENT_HOME/config.yaml" ]; then
     log_info "创建默认配置..."
     cat > "$ARGENT_HOME/config.yaml" << 'YAML'
@@ -67,18 +81,17 @@ else
     log_info "config.yaml 已存在，跳过"
 fi
 
-# ── 5. PATH ──
-if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
-    log_info "已添加 ~/.local/bin 到 PATH（重启终端后生效）"
-fi
-
 echo ""
 echo "╔══════════════════════════════════════════╗"
 echo "║    Argent ${ARGENT_VERSION}  安装完成!              ║"
 echo "╠══════════════════════════════════════════╣"
 echo "║  下一步:                                  ║"
+echo "║    source ~/.bashrc                      ║"
 echo "║    argent setup   配置账号                ║"
 echo "║    argent         开始对话                ║"
 echo "╚══════════════════════════════════════════╝"
 echo ""
+
+if [ -t 0 ]; then
+  exec "$SHELL" -l
+fi
