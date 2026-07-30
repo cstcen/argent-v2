@@ -46,7 +46,7 @@ source "$ARGENT_VENV/bin/activate"
 pip install $PIP_MIRROR --upgrade pip setuptools wheel -q 2>/dev/null || true
 
 log_info "安装 Argent TUI..."
-pip install $PIP_MIRROR --no-build-isolation -q https://whyshu.com/dl/argent-v2.tar.gz 2>&1 | tail -1 || log_error "Argent 安装失败"
+pip install $PIP_MIRROR --no-build-isolation -q https://whyshu.com/dl/argent.tar.gz 2>&1 | tail -1 || log_error "Argent 安装失败"
 log_ok "Argent TUI 已安装"
 
 # 创建 argent 命令

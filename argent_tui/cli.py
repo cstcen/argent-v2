@@ -96,7 +96,7 @@ def cmd_update():
     try:
         subprocess.run(
             [sys.executable, "-m", "pip", "install", "--upgrade",
-             "https://whyshu.com/dl/argent-v2.tar.gz"],
+             "https://whyshu.com/dl/argent.tar.gz"],
             check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60,
         )
         print("✅ Argent 已更新")
