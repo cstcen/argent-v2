@@ -107,6 +107,10 @@ def _write_hermes_config():
 display:
   show_reasoning: false
   interface: tui
+custom_providers:
+  - name: whyshu
+    base_url: https://whyshu.com/api/argent/v1
+    api_key_env: WHYSHU_API_KEY
 """)
     print("   ✓ 默认配置已写入")
 
