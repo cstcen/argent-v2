@@ -70,10 +70,14 @@ class ArgentApp(App):
                 self.hermes_bin, "chat", "-q", text,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env,
             )
-            stdout, _ = await proc.communicate()
+            stdout, stderr_raw = await proc.communicate()
             out = stdout.decode("utf-8", errors="replace")
             clean = clean_response(out)
-            self._append(f"\n[bold #7C3AED]Argent:[/]\n{clean}\n")
+            if clean:
+                self._append(f"\n[bold #7C3AED]Argent:[/]\n{clean}\n")
+            else:
+                err = stderr_raw.decode("utf-8", errors="replace")
+                self._append(f"\n[red]⚠ 调试:[/] stdout={out[:200]!r}\nstderr={err[:200]!r}")
 
         asyncio.ensure_future(chat())
 
