@@ -30,7 +30,7 @@ log_ok "Python $(python3 --version | cut -d' ' -f2)"
 
 # ── 2. 安装 Argent TUI ──
 log_info "安装 Argent TUI..."
-pip3 install --user -q git+https://github.com/cstcen/argent-v2.git 2>&1 | tail -1 || log_error "Argent 安装失败"
+python3 -m pip install --user -q git+https://github.com/cstcen/argent-v2.git 2>&1 | tail -1 || log_error "Argent 安装失败"
 log_ok "Argent TUI 已安装"
 
 # ── 3. 检查/安装 Hermes ──
@@ -38,9 +38,9 @@ if command -v hermes &>/dev/null; then
     log_ok "Hermes 已安装: $(which hermes)"
 else
     log_info "安装 Hermes Agent（约需 30 秒）..."
-    pip3 install --user -q hermes-agent 2>&1 | tail -1 || {
+    python3 -m pip install --user -q hermes-agent 2>&1 | tail -1 || {
         log_info "pip 安装失败，尝试 pipx..."
-        pipx install hermes-agent 2>/dev/null || log_error "Hermes 安装失败，请手动安装：pip install hermes-agent"
+        pipx install hermes-agent 2>/dev/null || log_error "Hermes 安装失败，请手动安装：python3 -m pip install hermes-agent"
     }
     log_ok "Hermes Agent 已安装"
 fi
