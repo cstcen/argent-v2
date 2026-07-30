@@ -110,7 +110,32 @@ def cmd_update():
     except Exception as e:
         print(f"⚠️  插件更新失败: {e}")
 
-    # 3. Skills 更新（后续从远程同步）
+    # 3. 更新 Hermes
+    try:
+        import shutil
+        hermes_bin = shutil.which("hermes")
+        if hermes_bin:
+            print("🔄 检查 Hermes 更新...")
+            if subprocess.run(
+                ["curl", "-fsSL", "--connect-timeout", "5",
+                 "https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            ).returncode == 0:
+                subprocess.run(
+                    ["curl", "-fsSL",
+                     "https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh"],
+                    check=False,
+                )
+            else:
+                subprocess.run(
+                    [sys.executable, "-m", "pip", "install", "--upgrade", "hermes-agent"],
+                    check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120,
+                )
+            print("✅ Hermes 已更新")
+    except Exception as e:
+        print(f"⚠️  Hermes 更新失败: {e}")
+
+    # 4. Skills 更新（后续从远程同步）
     print("✅ Skills 更新检查完成")
 
     print(f"\n✅ Argent v{VERSION} 已是最新。")
