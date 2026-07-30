@@ -58,12 +58,13 @@ if [[ ":$PATH:" != *":$ARGENT_HOME/bin:"* ]]; then
   echo "export PATH=\"$ARGENT_HOME/bin:\$PATH\"" >> "$HOME/.bashrc"
 fi
 
-# ── 3. 安装 Hermes ──
+# ── 3. 安装 Hermes（使用官方脚本）───
 if command -v hermes &>/dev/null; then
     log_ok "Hermes 已安装: $(which hermes)"
 else
-    log_info "安装 Hermes Agent（约需 30 秒）..."
-    pip install $PIP_MIRROR -q hermes-agent 2>&1 | tail -1 || log_error "Hermes 安装失败，请手动安装：pip install $PIP_MIRROR hermes-agent"
+    log_info "安装 Hermes Agent（使用官方脚本）..."
+    curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash 2>&1 | tail -3
+    command -v hermes &>/dev/null || log_error "Hermes 安装失败，请手动安装：pip install hermes-agent"
     log_ok "Hermes Agent 已安装"
 fi
 
