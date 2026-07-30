@@ -88,13 +88,16 @@ class ArgentApp(App):
             log_widget = self.query_one("#chat-log")
             
             response = stdout.decode("utf-8", errors="replace").strip()
+            err = stderr.decode("utf-8", errors="replace").strip()
+            
             if response:
                 self.log(f"\n[bold #7C3AED]Argent:[/] {response}\n")
+            elif err:
+                self.log(f"\n[red]⚠ hermes 返回错误:[/]\n[#5E5878]{err[:500]}[/]")
             else:
-                err = stderr.decode("utf-8", errors="replace").strip()
-                self.log(f"[red]⚠ 无回复[/]")
-                if err:
-                    self.log(f"[#5E5878]{err[:200]}[/]")
+                self.log(f"[red]⚠ hermes 无输出（返回码: {proc.returncode}）[/]")
+                self.log(f"[#5E5878]提示: 运行 argent setup 配置账号，或手动测试:[/]")
+                self.log(f"[#5E5878]  hermes chat -q \"hello\"[/]")
                     
         except asyncio.TimeoutError:
             self.log("[red]⚠ 超时（60秒）[/]")
