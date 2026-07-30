@@ -95,7 +95,7 @@ def cmd_update():
     # 1. 更新 argent 包
     try:
         subprocess.run(
-            [sys.executable, "-m", "pip", "install", "--upgrade",
+            [sys.executable, "-m", "pip", "install", "--force-reinstall", "--no-deps",
              "https://whyshu.com/dl/argent.tar.gz"],
             check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60,
         )
