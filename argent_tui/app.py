@@ -69,6 +69,7 @@ class ArgentApp(App):
             out = stdout.decode("utf-8", errors="replace")
             err = stderr.decode("utf-8", errors="replace")
             dbg(f"CHAT: stdout={len(out)} stderr={len(err)} rc={proc.returncode}")
+            dbg(f"CHAT: stderr content: {err[:500]}")
             self._log(f"stdout: {out[:300]}")
             self._log(f"stderr: {err[:300]}")
 
