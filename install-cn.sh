@@ -49,8 +49,9 @@ log_info "安装 Argent TUI..."
 pip install $PIP_MIRROR --no-build-isolation -q https://whyshu.com/dl/argent.tar.gz 2>&1 | tail -1 || log_error "Argent 安装失败"
 log_ok "Argent TUI 已安装"
 
-# 创建 argent 命令
+# 创建 argent 命令（覆盖旧版）
 mkdir -p "$ARGENT_HOME/bin"
+rm -f "$HOME/.local/bin/argent" "$HOME/.local/bin/argent.exe" 2>/dev/null || true
 cat > "$ARGENT_HOME/bin/argent" << 'ARGENTEOF'
 #!/usr/bin/env bash
 source "$HOME/.argent/venv/bin/activate"
