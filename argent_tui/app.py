@@ -1,10 +1,16 @@
-"""Argent TUI — 极简调试版 v3."""
+"""Argent TUI — 调试版（写文件日志）。"""
 import os, shutil, asyncio
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.widgets import Input, Static
 
 ARGENT_HOME = Path(os.environ.get("ARGENT_HOME", Path.home() / ".argent"))
+LOG_FILE = ARGENT_HOME / "argent_debug.log"
+
+def dbg(msg: str):
+    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(LOG_FILE, "a") as f:
+        f.write(msg + "\n")
 
 class ArgentApp(App):
     CSS = "Screen { background: #0D1B2A; } #log { padding: 1 2; color: #DDE4EC; } #inp { dock: bottom; margin: 1 2; height: 3; }"
@@ -14,33 +20,33 @@ class ArgentApp(App):
         yield Input(placeholder="输入消息...", id="inp")
 
     def on_mount(self):
+        dbg("on_mount start")
         self.hermes_bin = shutil.which("hermes")
-        msg = f"Hermes: {self.hermes_bin or 'NOT FOUND'}"
-        print(msg, flush=True)
-        self._log(msg)
-        print("on_mount done", flush=True)
+        dbg(f"Hermes: {self.hermes_bin}")
+        self._log(f"Hermes: {self.hermes_bin or 'NOT FOUND'}")
+        dbg("on_mount done")
 
     def _log(self, msg: str):
-        print(f"LOG: {msg[:100]}", flush=True)
         self._log_text = getattr(self, "_log_text", "") + "\n" + str(msg)[:500]
         self.query_one("#log").update(self._log_text)
 
     def on_input_submitted(self, event: Input.Submitted):
-        print(f"INPUT: {event.value!r}", flush=True)
+        dbg(f"INPUT: {event.value!r}")
         text = event.value.strip()
         if not text:
-            print("INPUT: empty!", flush=True)
+            dbg("INPUT: empty")
             return
         event.input.value = ""
         self._log(f"你: {text}")
-        print("INPUT: logged", flush=True)
+        dbg("INPUT: logged")
 
         if not self.hermes_bin:
             self._log("⚠ hermes 未安装")
+            dbg("INPUT: no hermes_bin")
             return
 
         async def chat():
-            print("CHAT: starting subprocess", flush=True)
+            dbg("CHAT: starting subprocess")
             env = os.environ.copy()
             env["HERMES_HOME"] = str(ARGENT_HOME)
             env_file = ARGENT_HOME / ".env"
@@ -49,7 +55,7 @@ class ArgentApp(App):
                     if line.strip() and "=" in line and not line.startswith("#"):
                         k, _, v = line.partition("=")
                         env[k.strip()] = v.strip()
-            print(f"CHAT: calling hermes chat -q {text!r}", flush=True)
+            dbg(f"CHAT: calling hermes chat -q {text!r}")
             proc = await asyncio.create_subprocess_exec(
                 self.hermes_bin, "chat", "-q", text,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env,
@@ -57,12 +63,13 @@ class ArgentApp(App):
             stdout, stderr = await proc.communicate()
             out = stdout.decode("utf-8", errors="replace")
             err = stderr.decode("utf-8", errors="replace")
-            print(f"CHAT: stdout[{len(out)}] stderr[{len(err)}] rc={proc.returncode}", flush=True)
-            self._log(f"stdout: {out[:200]}")
-            self._log(f"stderr: {err[:200]}")
+            dbg(f"CHAT: stdout={len(out)} stderr={len(err)} rc={proc.returncode}")
+            self._log(f"stdout: {out[:300]}")
+            self._log(f"stderr: {err[:300]}")
 
         asyncio.ensure_future(chat())
-        print("INPUT: future created", flush=True)
+        dbg("INPUT: future created")
 
 def main():
+    dbg("=== argent start ===")
     ArgentApp().run()
