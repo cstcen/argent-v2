@@ -9,6 +9,8 @@ log_ok()    { echo -e "${GREEN}✓${NC} $*"; }
 log_error() { echo -e "${RED}✗${NC} $*"; exit 1; }
 
 ARGENT_VERSION="v2.0.0"
+PIP_MIRROR=""  # 国内镜像，默认空
+curl -s --connect-timeout 3 https://pypi.tuna.tsinghua.edu.cn/ &>/dev/null && PIP_MIRROR="-i https://pypi.tuna.tsinghua.edu.cn/simple" || true
 
 echo ""
 echo "╔══════════════════════════════════════════╗"
