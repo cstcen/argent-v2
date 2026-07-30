@@ -1,4 +1,4 @@
-"""Argent Setup — 问述账号登录、角色选择、飞书配置。"""
+"""Argent Setup — 问述账号登录、角色选择、飞书配置、Hermes 配置。"""
 
 import webbrowser
 import time
@@ -6,6 +6,8 @@ import json
 import urllib.request
 import urllib.error
 import os
+import subprocess
+import sys
 from pathlib import Path
 
 ARGENT_HOME = Path(os.environ.get("ARGENT_HOME", Path.home() / ".argent"))
@@ -14,7 +16,6 @@ WHYSHU_BASE = os.environ.get("WHYSHU_API_URL", "https://whyshu.com")
 
 def login_whyshu() -> bool:
     """Device Flow 登录问述科技账号，返回成功/失败。"""
-    # 1. 请求 device code
     try:
         req = urllib.request.Request(
             f"{WHYSHU_BASE}/api/oauth/device",
@@ -30,7 +31,6 @@ def login_whyshu() -> bool:
         print(f"❌ 授权请求失败: {e}")
         return False
 
-    # 2. 打开浏览器
     print(f"\n请在浏览器中打开以下地址完成登录：")
     print(f"\n   {verification_uri}\n")
     print(f"授权码: {user_code}")
@@ -41,10 +41,9 @@ def login_whyshu() -> bool:
     except Exception:
         pass
 
-    # 3. 轮询 token
     print("\n等待授权...", end="", flush=True)
     token = None
-    for _ in range(60):  # 最多等 60 秒
+    for _ in range(60):
         time.sleep(2)
         print(".", end="", flush=True)
         try:
@@ -73,11 +72,10 @@ def login_whyshu() -> bool:
         print("❌ 授权超时，请重新运行 argent setup")
         return False
 
-    # 4. 保存 token
     ARGENT_HOME.mkdir(parents=True, exist_ok=True)
     (ARGENT_HOME / "auth_token").write_text(token)
 
-    # 5. 写入 WHYSHU_API_KEY 到 .env
+    # 写入 WHYSHU_API_KEY 到 .env
     env_path = ARGENT_HOME / ".env"
     lines = []
     if env_path.exists():
@@ -86,19 +84,63 @@ def login_whyshu() -> bool:
     lines.append(f"WHYSHU_API_KEY={token}")
     env_path.write_text("\n".join(lines) + "\n")
 
-    # 6. 确保 config.yaml 有 provider: whyshu
+    # 写入 Hermes config.yaml
+    _write_hermes_config()
+
+    # 安装 whyshu provider 插件
+    _install_whyshu_plugin()
+
+    print("✅ 登录成功！")
+    return True
+
+
+def _write_hermes_config():
+    """写入 Hermes 配置文件到 ~/.argent/config.yaml。"""
     config_path = ARGENT_HOME / "config.yaml"
-    if not config_path.exists():
-        config_path.write_text("""model:
+    if config_path.exists():
+        print("   config.yaml 已存在，跳过。")
+        return
+
+    config_path.write_text("""model:
   default: deepseek-v4-pro
   provider: whyshu
 display:
   show_reasoning: false
   interface: tui
 """)
+    print("   ✓ 默认配置已写入")
 
-    print("✅ 登录成功！")
-    return True
+
+def _install_whyshu_plugin():
+    """安装 whyshu provider 插件到 Hermes 插件目录。"""
+    plugin_dir = ARGENT_HOME / "plugins" / "model-providers" / "whyshu"
+    plugin_dir.mkdir(parents=True, exist_ok=True)
+
+    (plugin_dir / "__init__.py").write_text("""\"\"\"WHYSHU provider profile.\"\"\"
+from typing import Any
+from providers import register_provider
+from providers.base import ProviderProfile
+
+class WhyshuProfile(ProviderProfile):
+    def build_api_kwargs_extras(self, *, reasoning_config=None, **ctx: Any):
+        return {}, {}
+
+whyshu = WhyshuProfile(
+    name="whyshu", aliases=(),
+    env_vars=("WHYSHU_API_KEY",),
+    base_url="https://whyshu.com/api/argent/v1",
+    default_max_tokens=131072,
+)
+register_provider(whyshu)
+""")
+
+    (plugin_dir / "plugin.yaml").write_text("""name: whyshu
+kind: model-provider
+version: 1.0.0
+description: 问述科技 (WHYSHU) — 积分制 AI 模型服务
+author: WHYSHU
+""")
+    print("   ✓ whyshu provider 插件已安装")
 
 
 def select_role():
