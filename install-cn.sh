@@ -58,15 +58,12 @@ if [[ ":$PATH:" != *":$ARGENT_HOME/bin:"* ]]; then
   echo "export PATH=\"$ARGENT_HOME/bin:\$PATH\"" >> "$HOME/.bashrc"
 fi
 
-# ── 3. 安装 Hermes（使用官方脚本）───
-if command -v hermes &>/dev/null; then
-    log_ok "Hermes 已安装: $(which hermes)"
-else
-    log_info "安装 Hermes Agent（使用官方脚本）..."
-    curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash 2>&1 | tail -3
-    command -v hermes &>/dev/null || log_error "Hermes 安装失败，请手动安装：pip install hermes-agent"
-    log_ok "Hermes Agent 已安装"
-fi
+# ── 3. 安装/更新 Hermes（官方脚本）───
+log_info "安装 Hermes Agent..."
+rm -f "$HOME/.local/bin/hermes" 2>/dev/null || true
+curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash 2>&1 | tail -5
+command -v hermes &>/dev/null || log_error "Hermes 安装失败，请检查网络后重试"
+log_ok "Hermes Agent 已安装"
 
 # ── 4. 配置 ──
 if [ ! -f "$ARGENT_HOME/config.yaml" ]; then
