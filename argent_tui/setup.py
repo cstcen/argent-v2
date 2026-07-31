@@ -134,6 +134,10 @@ display:
     shutil.copy(ARGENT_HOME / ".env", HERMES_HOME / ".env")
 
     print("✅ 登录成功！Hermes 已配置 whyshu provider。")
+
+    # ── 安装 Skills ──
+    _install_skills()
+
     return True
 
 
@@ -241,3 +245,26 @@ def setup_feishu():
 
     print(f"\n  ✅ 飞书配置已完成")
     print(f"     运行 argent gateway install 启用飞书推送")
+
+
+def _install_skills():
+    """将 Argent 预置 Skills 复制到 ~/.argent/skills/。"""
+    from pathlib import Path
+
+    # Skills 来源：打包在 argent_tui 内的 skills/ 目录
+    src = Path(__file__).parent / "skills"
+    if not src.is_dir():
+        return
+
+    dst = ARGENT_HOME / "skills"
+    dst.mkdir(parents=True, exist_ok=True)
+
+    count = 0
+    for item in src.iterdir():
+        target = dst / item.name
+        if item.is_dir() and not (target / "SKILL.md").exists():
+            shutil.copytree(item, target, dirs_exist_ok=True)
+            count += 1
+
+    if count:
+        print(f"  ✅ {count} 个 Skills 已安装到 ~/.argent/skills/")

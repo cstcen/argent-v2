@@ -11,6 +11,9 @@ dependencies = [
 [project.scripts]
 argent = "argent_tui.cli:main"
 
+[tool.setuptools.package-data]
+argent_tui = ["skills/**/*"]
+
 [build-system]
 requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
