@@ -151,6 +151,8 @@ def select_role():
         ("1", "通用助手", "general", "基础 AI 对话，无行业限制"),
         ("2", "美客多运营", "mercadolibre", "美客多电商运营（店铺日报/关键词/货件管理）"),
         ("3", "美客多老板", "mercadolibre_boss", "美客多店铺概览与分析"),
+        ("4", "HR", "hr", "招聘/培训/绩效，PPT 制作 + 飞书全套或本地文档"),
+        ("5", "行政", "admin", "会议/日程/制度文档，PPT 制作 + 飞书全套或本地文档"),
     ]
     for num, name, _key, desc in roles:
         print(f"  [{num}] {name} — {desc}")
