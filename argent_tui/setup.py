@@ -256,7 +256,7 @@ def _install_skills():
     if not src.is_dir():
         return
 
-    dst = ARGENT_HOME / "skills"
+    dst = HERMES_HOME / "skills"
     dst.mkdir(parents=True, exist_ok=True)
 
     count = 0
