@@ -1,6 +1,6 @@
 [project]
 name = "argent"
-version = "0.3.3"
+version = "0.3.4"
 description = "Argent — 问述科技桌面 AI 助手 TUI"
 readme = "README.md"
 requires-python = ">=3.10"

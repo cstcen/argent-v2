@@ -176,11 +176,24 @@ def select_role():
             config["argent"] = config.get("argent", {})
             config["argent"]["role"] = key
             config["argent"]["role_name"] = name
+
+            # 🔑 v0.3.4: 按角色自动激活 Skills（bundles）
+            bundles_map = {
+                "mercadolibre": ["mercadolibre"],
+                "mercadolibre_boss": ["mercadolibre"],
+                "hr": ["ppt"],
+                "office": ["ppt"],
+            }
+            if key in bundles_map:
+                config["bundles"] = bundles_map[key]
+
             with open(config_path, "w") as f:
                 yaml.dump(config, f, allow_unicode=True)
             # 同步到 Hermes
             shutil.copy(config_path, HERMES_HOME / "config.yaml")
             print(f"\n  ✅ 已选择角色：{name}")
+            if key in bundles_map:
+                print(f"     Skills 已激活: {', '.join(bundles_map[key])}")
             print(f"     配置已写入 {config_path}")
             return
         print("  无效选择，请重试。")
