@@ -175,7 +175,9 @@ def select_role():
                 config = {}
             config["argent"] = config.get("argent", {})
             # 🔑 v0.3.4: bundles
+            # 先清空旧 bundles，再设置新的（确保切换角色时旧 Skills 不加载）
             bundles_map = {
+                "general": [],
                 "mercadolibre": ["mercadolibre"],
                 "mercadolibre_boss": ["mercadolibre"],
                 "hr": ["ppt"],
