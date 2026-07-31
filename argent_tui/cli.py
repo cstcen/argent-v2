@@ -8,7 +8,7 @@ from pathlib import Path
 
 ARGENT_HOME = Path(os.environ.get("ARGENT_HOME", Path.home() / ".argent"))
 HERMES_HOME = ARGENT_HOME
-VERSION = "0.3.1"
+VERSION = "0.3.2"
 
 
 def main():
@@ -24,6 +24,12 @@ def main():
         return cmd_balance()
     elif cmd == "whoami":
         return cmd_whoami()
+    elif cmd == "role":
+        from argent_tui.setup import select_role
+        return select_role()
+    elif cmd == "feishu-setup":
+        from argent_tui.setup import setup_feishu
+        return setup_feishu()
     elif cmd == "version" or cmd == "--version" or cmd == "-v":
         print(f"Argent v{VERSION}")
     elif cmd == "chat" or cmd == "" or cmd == "--help" or cmd == "-h":

@@ -138,16 +138,106 @@ display:
 
 
 def select_role():
-    choice = input("  是否现在选择角色？[y/N]: ").strip().lower()
-    if choice not in ("y", "yes"):
-        print("  已跳过。")
-        return
-    print("  角色选择功能将在后续版本中完善。")
+    """选择行业与角色，写入 config.yaml。"""
+    import yaml
+
+    print()
+    print("  可用行业角色：")
+    roles = [
+        ("1", "通用助手", "general", "基础 AI 对话，无行业限制"),
+        ("2", "美客多运营", "mercadolibre", "美客多电商运营（店铺日报/关键词/货件管理）"),
+        ("3", "美客多老板", "mercadolibre_boss", "美客多店铺概览与分析"),
+    ]
+    for num, name, _key, desc in roles:
+        print(f"  [{num}] {name} — {desc}")
+    print(f"  [0] 跳过")
+
+    while True:
+        choice = input(f"\n  请选择 [0-{len(roles)}]: ").strip()
+        if choice == "0" or choice == "":
+            print("  已跳过。稍后运行 argent role 重新配置。")
+            return
+        selected = [r for r in roles if r[0] == choice]
+        if selected:
+            _, name, key, _ = selected[0]
+            # 写入 config.yaml
+            config_path = ARGENT_HOME / "config.yaml"
+            if config_path.exists():
+                with open(config_path) as f:
+                    config = yaml.safe_load(f) or {}
+            else:
+                config = {}
+            config["argent"] = config.get("argent", {})
+            config["argent"]["role"] = key
+            config["argent"]["role_name"] = name
+            with open(config_path, "w") as f:
+                yaml.dump(config, f, allow_unicode=True)
+            # 同步到 Hermes
+            shutil.copy(config_path, HERMES_HOME / "config.yaml")
+            print(f"\n  ✅ 已选择角色：{name}")
+            print(f"     配置已写入 {config_path}")
+            return
+        print("  无效选择，请重试。")
 
 
 def setup_feishu():
+    """配置飞书对接。写入 Gateway 配置。"""
+    import yaml
+
     choice = input("  是否现在配置飞书？[y/N]: ").strip().lower()
     if choice not in ("y", "yes"):
-        print("  已跳过。")
+        print("  已跳过。稍后运行 argent feishu-setup 配置。")
         return
-    print("  飞书配置功能将在后续版本中完善。")
+
+    print()
+    print("  飞书配置需要以下信息：")
+    print("  - 飞书 App ID（可在飞书开放平台获取）")
+    print("  - 飞书 App Secret")
+    print()
+    print("  获取方式：https://open.feishu.cn → 开发者后台 → 创建企业自建应用")
+    print()
+
+    app_id = input("  App ID: ").strip()
+    if not app_id:
+        print("  ⚠ App ID 不能为空，已跳过。")
+        return
+
+    app_secret = input("  App Secret: ").strip()
+    if not app_secret:
+        print("  ⚠ App Secret 不能为空，已跳过。")
+        return
+
+    # 写入 config.yaml
+    config_path = ARGENT_HOME / "config.yaml"
+    if config_path.exists():
+        with open(config_path) as f:
+            config = yaml.safe_load(f) or {}
+    else:
+        config = {}
+
+    config["gateway"] = config.get("gateway", {})
+    config["gateway"]["platforms"] = config["gateway"].get("platforms", {})
+    config["gateway"]["platforms"]["feishu"] = {
+        "app_id": app_id,
+        "app_secret": app_secret,
+        "app_type": "self_built",
+    }
+    with open(config_path, "w") as f:
+        yaml.dump(config, f, allow_unicode=True)
+
+    # 同步到 Hermes
+    shutil.copy(config_path, HERMES_HOME / "config.yaml")
+
+    # 写入 .env（Feishu 凭证）
+    env_path = ARGENT_HOME / ".env"
+    lines = []
+    if env_path.exists():
+        lines = [l for l in env_path.read_text().splitlines()
+                 if not l.startswith(("FEISHU_APP_ID=", "FEISHU_APP_SECRET="))]
+    lines.append(f"FEISHU_APP_ID={app_id}")
+    lines.append(f"FEISHU_APP_SECRET={app_secret}")
+    env_path.write_text("\n".join(lines) + "\n")
+    shutil.copy(env_path, HERMES_HOME / ".env")
+
+    print(f"\n  ✅ 飞书配置已完成")
+    print(f"     运行 argent gateway install 启用飞书推送")
