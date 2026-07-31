@@ -174,10 +174,7 @@ def select_role():
             else:
                 config = {}
             config["argent"] = config.get("argent", {})
-            config["argent"]["role"] = key
-            config["argent"]["role_name"] = name
-
-            # 🔑 v0.3.5: bundles
+            # 🔑 v0.3.4: bundles
             bundles_map = {
                 "mercadolibre": ["mercadolibre"],
                 "mercadolibre_boss": ["mercadolibre"],
@@ -187,7 +184,15 @@ def select_role():
             if key in bundles_map:
                 config["bundles"] = bundles_map[key]
 
-            # 🔑 v0.3.5: system_prompt
+            # 🔑 v0.3.6: system_prompt
+
+            # 🔑 v0.3.6: tools
+            tools_map = {
+                "mercadolibre": {"browser": True, "web_search": True},
+                "mercadolibre_boss": {"browser": True, "web_search": True},
+            }
+            if key in tools_map:
+                config["tools"] = tools_map[key]
             prompts = {
                 "general": "你是一个通用的 AI 助手，友好、简洁地回答用户的问题。",
                 "mercadolibre": "你是美客多电商运营专家，擅长店铺数据分析、关键词调研、货件管理和广告优化。回答注重数据和实操。",
