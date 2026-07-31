@@ -45,30 +45,45 @@ def cmd_chat():
 
 
 def cmd_setup():
-    """三步引导配置。"""
-    print("╔══════════════════════════════════════════╗")
-    print("║     欢迎使用 Argent 桌面 AI 助手        ║")
-    print("╠══════════════════════════════════════════╣")
-    print("║  ①  登录问述科技账号（必须）            ║")
-    print("║  ②  选择行业与角色（可选）              ║")
-    print("║  ③  配置飞书对接（可选）                ║")
-    print("╚══════════════════════════════════════════╝")
-    print()
+    """三步引导配置，已有配置则跳过。"""
+    from argent_tui.setup import login_whyshu, select_role, setup_feishu
 
-    print("━━━ ① 登录问述科技账号 ━━━")
-    from argent_tui.setup import login_whyshu
-    if not login_whyshu():
-        print("登录失败，请重试 argent setup")
-        return
-    
+    is_logged_in = (ARGENT_HOME / ".env").exists() and \
+        any(line.startswith("WHYSHU_API_KEY=") for line in (ARGENT_HOME / ".env").read_text().splitlines() if "WHYSHU_API_KEY=" in line)
+
+    if is_logged_in:
+        print("╔══════════════════════════════════════════╗")
+        print("║   ✅ 已登录问述科技账号                  ║")
+        print("╠══════════════════════════════════════════╣")
+        print("║  ②  选择行业与角色（可选）              ║")
+        print("║  ③  配置飞书对接（可选）                ║")
+        print("╚══════════════════════════════════════════╝")
+        print()
+        choice = input("  ① 重新登录？[y/N]: ").strip().lower()
+        print()
+        if choice in ("y", "yes"):
+            if not login_whyshu():
+                return
+    else:
+        print("╔══════════════════════════════════════════╗")
+        print("║     欢迎使用 Argent 桌面 AI 助手        ║")
+        print("╠══════════════════════════════════════════╣")
+        print("║  ①  登录问述科技账号（必须）            ║")
+        print("║  ②  选择行业与角色（可选）              ║")
+        print("║  ③  配置飞书对接（可选）                ║")
+        print("╚══════════════════════════════════════════╝")
+        print()
+        print("━━━ ① 登录问述科技账号 ━━━")
+        if not login_whyshu():
+            print("登录失败，请重试 argent setup")
+            return
+
     print()
     print("━━━ ② 选择行业与角色（可选） ━━━")
-    from argent_tui.setup import select_role
     select_role()
 
     print()
     print("━━━ ③ 配置飞书对接（可选） ━━━")
-    from argent_tui.setup import setup_feishu
     setup_feishu()
 
     print()
