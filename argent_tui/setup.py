@@ -174,17 +174,32 @@ def select_role():
             else:
                 config = {}
             config["argent"] = config.get("argent", {})
-            # 🔑 v0.3.4: bundles
-            # 先清空旧 bundles，再设置新的（确保切换角色时旧 Skills 不加载）
+            # 🔑 v0.3.4: bundles + 按角色 symlink Skills
             bundles_map = {
                 "general": [],
                 "mercadolibre": ["mercadolibre"],
                 "mercadolibre_boss": ["mercadolibre"],
-                "hr": ["ppt"],
-                "office": ["ppt"],
+                "hr": [],
+                "office": [],
             }
             if key in bundles_map:
                 config["bundles"] = bundles_map[key]
+
+            # symlink 方式：先删旧 symlink，再建新的
+            skills_dst = HERMES_HOME / "skills"
+            argent_skills = ARGENT_HOME / "skills"
+            # 删除所有 Argent 管理的 symlink
+            if skills_dst.is_dir():
+                for entry in list(skills_dst.iterdir()):
+                    if entry.is_symlink() and str(entry.resolve()).startswith(str(argent_skills)):
+                        entry.unlink()
+            # 建立新 symlink
+            needed = bundles_map.get(key, [])
+            for bundle in needed:
+                src = argent_skills / bundle
+                dst = skills_dst / bundle
+                if src.is_dir() and not dst.exists():
+                    dst.symlink_to(src)
 
             # 🔑 v0.3.6: system_prompt
 
@@ -283,23 +298,33 @@ def setup_feishu():
 
 
 def _install_skills():
-    """将 Argent 预置 Skills 复制到 ~/.argent/skills/。"""
+    """将 Argent 预置 Skills symlink 到 ~/.hermes/skills/。"""
     from pathlib import Path
 
-    # Skills 来源：打包在 argent_tui 内的 skills/ 目录
     src = Path(__file__).parent / "skills"
     if not src.is_dir():
         return
 
-    dst = HERMES_HOME / "skills"
-    dst.mkdir(parents=True, exist_ok=True)
+    # 存到 Argent 自己的目录
+    argent_skills = ARGENT_HOME / "skills"
+    argent_skills.mkdir(parents=True, exist_ok=True)
 
-    count = 0
+    # 复制 Skills 源文件到 ARGENT_HOME（只做一次）
     for item in src.iterdir():
-        target = dst / item.name
+        target = argent_skills / item.name
         if item.is_dir() and not (target / "SKILL.md").exists():
             shutil.copytree(item, target, dirs_exist_ok=True)
+
+    # symlink 到 HERMES_HOME（Hermes 只扫这里）
+    hermes_skills = HERMES_HOME / "skills"
+    hermes_skills.mkdir(parents=True, exist_ok=True)
+
+    count = 0
+    for item in argent_skills.iterdir():
+        link = hermes_skills / item.name
+        if item.is_dir() and not link.exists():
+            link.symlink_to(item)
             count += 1
 
     if count:
-        print(f"  ✅ {count} 个 Skills 已安装到 ~/.argent/skills/")
+        print(f"  ✅ {count} 个 Skills 已 symlink 到 ~/.hermes/skills/")
