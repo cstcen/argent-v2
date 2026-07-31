@@ -61,13 +61,12 @@ source "$HOME/.argent/venv/bin/activate"
 case "${1:-chat}" in
   update)
     echo "🔄 正在更新 Argent..."
-    pip install --force-reinstall --no-deps -q https://whyshu.com/dl/argent.tar.gz 2>&1 | tail -1
+    pip install --no-cache-dir --force-reinstall --no-deps -q https://whyshu.com/dl/argent.tar.gz
     V=$(python -c "from argent_tui import __version__; print(__version__)" 2>/dev/null || echo "?")
     echo "✅ 已更新至 Argent v${V}"
     ;;
   whoami|balance|points)
-    # 需要新版本 Python 代码，先更新再执行
-    pip install --force-reinstall --no-deps -q https://whyshu.com/dl/argent.tar.gz 2>/dev/null
+    pip install --no-cache-dir --force-reinstall --no-deps -q https://whyshu.com/dl/argent.tar.gz 2>/dev/null
     exec python -m argent_tui.cli "$@"
     ;;
   version|--version|-v)
