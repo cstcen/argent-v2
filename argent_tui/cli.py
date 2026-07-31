@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 ARGENT_HOME = Path(os.environ.get("ARGENT_HOME", Path.home() / ".argent"))
-HERMES_HOME = ARGENT_HOME
+HERMES_HOME = Path(os.environ.get("HERMES_HOME", Path.home() / ".hermes"))
 VERSION = "0.3.2"
 
 
