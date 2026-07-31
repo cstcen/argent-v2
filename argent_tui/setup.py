@@ -177,7 +177,7 @@ def select_role():
             config["argent"]["role"] = key
             config["argent"]["role_name"] = name
 
-            # 🔑 v0.3.4: 按角色自动激活 Skills（bundles）
+            # 🔑 v0.3.5: bundles
             bundles_map = {
                 "mercadolibre": ["mercadolibre"],
                 "mercadolibre_boss": ["mercadolibre"],
@@ -186,6 +186,17 @@ def select_role():
             }
             if key in bundles_map:
                 config["bundles"] = bundles_map[key]
+
+            # 🔑 v0.3.5: system_prompt
+            prompts = {
+                "general": "你是一个通用的 AI 助手，友好、简洁地回答用户的问题。",
+                "mercadolibre": "你是美客多电商运营专家，擅长店铺数据分析、关键词调研、货件管理和广告优化。回答注重数据和实操。",
+                "mercadolibre_boss": "你是美客多店铺管理者，关注整体经营表现、趋势分析和战略决策。回答简洁，聚焦关键指标。",
+                "hr": "你是专业的人力资源助手，帮助处理招聘、培训、绩效评估和员工关系。回答规范专业，符合劳动法规。",
+                "office": "你是行政办公助手，帮助处理会议安排、文档撰写、日程管理。回答高效细致，格式清晰。",
+            }
+            if key in prompts:
+                config["system_prompt"] = prompts[key]
 
             with open(config_path, "w") as f:
                 yaml.dump(config, f, allow_unicode=True)
